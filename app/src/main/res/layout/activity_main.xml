@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:gravity="center_horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Status Text -->
+    <TextView
+        android:id="@+id/statusText"
+        android:text="Monitoring OFF"
+        android:textSize="20sp"
+        android:gravity="center"
+        android:layout_marginBottom="15dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Button to manage multiple emergency contacts -->
+    <Button
+        android:id="@+id/btnManageContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Manage Emergency Contacts"
+        android:layout_marginBottom="15dp"
+        />
+
+    <!-- Start Monitoring Button -->
+    <Button
+        android:id="@+id/startButton"
+        android:text="Start Monitoring"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Stop Monitoring Button -->
+    <Button
+        android:id="@+id/stopButton"
+        android:text="Stop Monitoring"
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Manual SOS Button -->
+    <Button
+        android:id="@+id/btnManualSos"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SEND MANUAL SOS"
+        android:backgroundTint="#D32F2F"
+        android:textColor="@android:color/white"
+        android:layout_marginTop="20dp"
+        />
+
+    <!-- View Map Button -->
+    <Button
+        android:id="@+id/btnOpenMap"
+        android:text="View Map"
+        android:layout_marginTop="20dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- View Accident History Button -->
+    <Button
+        android:id="@+id/btnAccidentHistory"
+        android:text="View Accident History"
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+</LinearLayout>
