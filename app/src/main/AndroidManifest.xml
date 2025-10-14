@@ -27,7 +27,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="Enter Your Google API" />
+            android:value="YOUR_API_KEY_HERE" />
 
         <activity
             android:name=".MainActivity"
@@ -38,11 +38,17 @@
             </intent-filter>
         </activity>
 
+        <!-- NEW ACTIVITY REGISTRATION: Set as dialog and show on lock screen -->
+        <activity
+            android:name=".AlertActivity"
+            android:theme="@style/Theme.AppCompat.Dialog"
+            android:showOnLockScreen="true"
+            android:exported="false"/>
+
         <activity android:name=".MapActivity" />
         <activity android:name=".AccidentHistoryActivity" />
         <activity android:name=".EmergencyContactsActivity" />
 
-        <!-- Final working service declaration (using 'location' as primary type for compatibility) -->
         <service
             android:name=".SensorService"
             android:foregroundServiceType="location"

@@ -32,7 +32,7 @@ class SensorService : Service(), SensorEventListener {
     private val NOTIFICATION_ID = 1
     private val NOTIFICATION_CHANNEL_ID = "SensorServiceChannel"
 
-    private val ACCELERATION_THRESHOLD = 50.0 // m/s^2
+    private val ACCELERATION_THRESHOLD = 25.0 // m/s^2
 
     private var isSosSent = false
 
