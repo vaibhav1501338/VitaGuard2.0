@@ -26,6 +26,7 @@ class AlertActivity : AppCompatActivity() {
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            // This line requires LocalBinder to be defined in SensorService
             val binder = service as SensorService.LocalBinder
             sensorService = binder.getService()
             isBound = true
@@ -40,7 +41,6 @@ class AlertActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Ensure the screen turns on and the app appears on top
         window.addFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                     WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
@@ -50,11 +50,9 @@ class AlertActivity : AppCompatActivity() {
         binding = ActivityAlertBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Extract location data
         latitude = intent.getDoubleExtra("LATITUDE", 0.0)
         longitude = intent.getDoubleExtra("LONGITUDE", 0.0)
 
-        // Bind to the service to communicate cancellation/completion
         bindService(Intent(this, SensorService::class.java), serviceConnection, Context.BIND_AUTO_CREATE)
 
         setupUI()
@@ -75,7 +73,6 @@ class AlertActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
-                // Timer expired, automatically send SOS
                 sendSosFinal()
             }
         }.start()
@@ -84,23 +81,19 @@ class AlertActivity : AppCompatActivity() {
     private fun cancelSos() {
         countDownTimer?.cancel()
 
-        // 1. Reset state in the background service
         if (isBound) {
             sensorService?.resetSosState()
         }
 
-        // 2. Notify user and finish activity
         Toast.makeText(this, "SOS Cancelled!", Toast.LENGTH_SHORT).show()
         finish()
     }
 
     private fun sendSosFinal() {
-        // 1. Trigger the actual SOS and logging via the background service
         if (isBound) {
             sensorService?.finishSosProcess(latitude, longitude)
         }
 
-        // 2. Notify user and finish activity
         Toast.makeText(this, "Low severity SOS Sent.", Toast.LENGTH_LONG).show()
         finish()
     }

@@ -21,6 +21,8 @@ import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.math.sqrt
+import android.os.Handler
+import android.os.Binder
 
 class SensorService : Service(), SensorEventListener {
 
@@ -32,7 +34,9 @@ class SensorService : Service(), SensorEventListener {
     private val NOTIFICATION_ID = 1
     private val NOTIFICATION_CHANNEL_ID = "SensorServiceChannel"
 
-    private val ACCELERATION_THRESHOLD = 25.0 // m/s^2
+    private val LOW_THRESHOLD = 30.0
+    private val HIGH_THRESHOLD = 45.0
+    private val COOLDOWN_TIME = 60000L
 
     private var isSosSent = false
 
@@ -69,22 +73,52 @@ class SensorService : Service(), SensorEventListener {
 
             val acceleration = sqrt(x * x + y * y + z * z)
 
-            if (acceleration > ACCELERATION_THRESHOLD && !isSosSent) {
-                isSosSent = true
-                Log.d("SensorService", "Fall detected! Triggering SOS.")
-                triggerSOS()
+            if (!isSosSent) {
+                if (acceleration >= HIGH_THRESHOLD) {
+                    isSosSent = true
+                    Log.d("SensorService", "High severity crash detected. Sending immediate SOS.")
+                    triggerSOS(true)
 
-                android.os.Handler(Looper.getMainLooper()).postDelayed({
-                    isSosSent = false
-                    Log.d("SensorService", "SOS cooldown finished.")
-                }, 60000)
+                } else if (acceleration >= LOW_THRESHOLD) {
+                    isSosSent = true
+                    Log.d("SensorService", "Low severity incident detected. Starting 5-second countdown.")
+                    triggerSOS(false)
+                }
             }
         }
     }
 
-    private fun triggerSOS() {
+    fun resetSosState() {
+        isSosSent = false
+        Log.d("SensorService", "SOS state manually reset.")
+        Handler(Looper.getMainLooper()).postDelayed({
+            isSosSent = false
+        }, COOLDOWN_TIME)
+    }
+
+    fun finishSosProcess(latitude: Double, longitude: Double) {
+        val accident = Accident(
+            id = System.currentTimeMillis(),
+            latitude = latitude,
+            longitude = longitude,
+            timestamp = System.currentTimeMillis()
+        )
+        db.collection("accidents").add(accident)
+            .addOnSuccessListener { Log.d("SensorService", "Accident saved to Firestore.") }
+
+        SOSManager.loadContacts(applicationContext)
+        SOSManager.sendSOS(applicationContext, latitude, longitude)
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            isSosSent = false
+        }, COOLDOWN_TIME)
+    }
+
+
+    private fun triggerSOS(immediate: Boolean) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e("SensorService", "Location permission not granted. Cannot send location.")
+            Log.e("SensorService", "Location permission not granted. Cannot send SOS.")
+            isSosSent = false
             return
         }
 
@@ -93,34 +127,41 @@ class SensorService : Service(), SensorEventListener {
                 val latitude = location.latitude
                 val longitude = location.longitude
 
-                val accident = Accident(
-                    id = System.currentTimeMillis(),
-                    latitude = latitude,
-                    longitude = longitude,
-                    timestamp = System.currentTimeMillis()
-                )
-                db.collection("accidents").add(accident)
-                    .addOnSuccessListener { Log.d("SensorService", "Accident saved to Firestore.") }
-
-                SOSManager.loadContacts(applicationContext) // Ensure contacts are loaded
-                SOSManager.sendSOS(applicationContext, latitude, longitude)
+                if (immediate) {
+                    finishSosProcess(latitude, longitude)
+                } else {
+                    val alertIntent = Intent(this, AlertActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        putExtra("LATITUDE", latitude)
+                        putExtra("LONGITUDE", longitude)
+                    }
+                    startActivity(alertIntent)
+                }
 
             } else {
-                Log.e("SensorService", "Could not get location.")
+                Log.e("SensorService", "Could not get location. Resetting state.")
+                isSosSent = false
             }
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
+    // LOCAL BINDER CLASS: This definition is necessary to fix the error in AlertActivity.kt
+    private val binder = LocalBinder()
+    inner class LocalBinder : Binder() {
+        fun getService(): SensorService = this@SensorService
+    }
+
     override fun onBind(intent: Intent?): IBinder? {
-        return null
+        return binder
     }
 
     private fun createNotification(): Notification {
+        val channelId = NOTIFICATION_CHANNEL_ID
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
+                channelId,
                 "Monitoring Service",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
@@ -128,7 +169,7 @@ class SensorService : Service(), SensorEventListener {
             manager.createNotificationChannel(channel)
         }
 
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+        return NotificationCompat.Builder(this, channelId)
             .setContentTitle("VitaGuard Active")
             .setContentText("Monitoring for accidents in the background.")
             .setSmallIcon(R.mipmap.ic_launcher)
