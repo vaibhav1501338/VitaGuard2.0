@@ -38,17 +38,11 @@
             </intent-filter>
         </activity>
 
-        <!-- NEW ACTIVITY REGISTRATION: Set as dialog and show on lock screen -->
-        <activity
-            android:name=".AlertActivity"
-            android:theme="@style/Theme.AppCompat.Dialog"
-            android:showOnLockScreen="true"
-            android:exported="false"/>
-
         <activity android:name=".MapActivity" />
         <activity android:name=".AccidentHistoryActivity" />
         <activity android:name=".EmergencyContactsActivity" />
 
+        <!-- FIX: Using the single, compatible 'location' flag to bypass the AAPT error -->
         <service
             android:name=".SensorService"
             android:foregroundServiceType="location"

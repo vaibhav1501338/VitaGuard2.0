@@ -1,71 +1,170 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:gravity="center_horizontal"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mainLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="#1C1C24">
 
-    <!-- Status Text -->
-    <TextView
-        android:id="@+id/statusText"
-        android:text="Monitoring OFF"
-        android:textSize="20sp"
-        android:gravity="center"
-        android:layout_marginBottom="15dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <!-- Button to manage multiple emergency contacts -->
-    <Button
-        android:id="@+id/btnManageContacts"
-        android:layout_width="match_parent"
+    <!-- Status Indicator Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/statusCard"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Manage Emergency Contacts"
-        android:layout_marginBottom="15dp"
-        />
+        android:layout_marginTop="32dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="10dp"
+        app:cardBackgroundColor="#2A2A38"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- Start Monitoring Button -->
-    <Button
-        android:id="@+id/startButton"
-        android:text="Start Monitoring"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp">
 
-    <!-- Stop Monitoring Button -->
-    <Button
-        android:id="@+id/stopButton"
-        android:text="Stop Monitoring"
-        android:layout_marginTop="10dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MONITORING STATUS"
+                android:textSize="16sp"
+                android:textColor="#BBBBBB"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
 
-    <!-- Manual SOS Button -->
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OFF"
+                android:textSize="48sp"
+                android:textStyle="bold"
+                android:textColor="#FF9800"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Start/Stop Monitoring Buttons -->
+    <LinearLayout
+        android:id="@+id/monitoringControls"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        app:layout_constraintTop_toBottomOf="@id/statusCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+            android:id="@+id/startButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Start Monitoring"
+            android:backgroundTint="#4CAF50"
+            android:textColor="@android:color/white"
+            android:paddingVertical="14dp"
+            android:textSize="16sp"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/stopButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Stop Monitoring"
+            android:backgroundTint="#797979"
+            android:textColor="@android:color/white"
+            android:paddingVertical="14dp"
+            android:textSize="16sp"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+
+    <!-- Manual SOS Button (High Importance) -->
     <Button
         android:id="@+id/btnManualSos"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="80dp"
         android:text="SEND MANUAL SOS"
-        android:backgroundTint="#D32F2F"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:backgroundTint="#FF5722"
         android:textColor="@android:color/white"
-        android:layout_marginTop="20dp"
-        />
+        android:layout_marginTop="40dp"
+        app:layout_constraintTop_toBottomOf="@id/monitoringControls"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- View Map Button -->
-    <Button
-        android:id="@+id/btnOpenMap"
-        android:text="View Map"
-        android:layout_marginTop="20dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+    <!-- Utility Button Grid -->
+    <GridLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:columnCount="2"
+        android:rowCount="2"
+        android:layout_marginTop="32dp"
+        app:layout_constraintTop_toBottomOf="@id/btnManualSos"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- View Accident History Button -->
-    <Button
-        android:id="@+id/btnAccidentHistory"
-        android:text="View Accident History"
-        android:layout_marginTop="10dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        <!-- Manage Contacts Button -->
+        <Button
+            android:id="@+id/btnManageContacts"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Manage Contacts"
+            android:backgroundTint="#2196F3"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            android:paddingVertical="16dp"
+            android:textSize="14sp"/>
 
-</LinearLayout>
+        <!-- View Map Button -->
+        <Button
+            android:id="@+id/btnOpenMap"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="View Map"
+            android:backgroundTint="#2196F3"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            android:paddingVertical="16dp"
+            android:textSize="14sp"/>
+
+        <!-- View Accident History Button -->
+        <Button
+            android:id="@+id/btnAccidentHistory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Accident History"
+            android:backgroundTint="#2196F3"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            android:paddingVertical="16dp"
+            android:textSize="14sp"/>
+
+        <!-- NEW: Theme Switch Control -->
+        <Switch
+            android:id="@+id/themeSwitch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Light Theme"
+            android:textColor="#BBBBBB"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:layout_margin="8dp"
+            android:paddingVertical="16dp"
+            android:textSize="14sp"
+            android:thumbTint="#FF9800"
+            android:trackTint="#797979" />
+
+    </GridLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

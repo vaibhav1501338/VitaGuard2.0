@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -12,17 +13,28 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.vitaguard.databinding.ActivityMainBinding
 import com.google.android.gms.location.LocationServices
+import android.widget.TextView // ADDED import for TextView
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val PERMISSION_REQUEST_CODE = 101
+
+    // Constants for theme colors
+    private val DARK_BG = Color.parseColor("#1C1C24")
+    private val LIGHT_BG = Color.parseColor("#F5F5F5")
+    private val DARK_CARD = Color.parseColor("#2A2A38")
+    private val LIGHT_CARD = Color.parseColor("#FFFFFF")
+    private val DARK_TEXT = Color.parseColor("#BBBBBB")
+    private val LIGHT_TEXT = Color.parseColor("#1C1C24")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Request permissions immediately when the app starts
+        // Apply theme immediately (defaulting to dark)
+        applyTheme(false)
+
         checkAndRequestPermissions()
 
         binding.startButton.setOnClickListener {
@@ -51,6 +63,29 @@ class MainActivity : AppCompatActivity() {
         binding.btnManageContacts.setOnClickListener {
             startActivity(Intent(this, EmergencyContactsActivity::class.java))
         }
+
+        // NEW: Theme Switch Listener
+        binding.themeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            applyTheme(isChecked)
+        }
+    }
+
+    // NEW: Theme application logic
+    private fun applyTheme(isLight: Boolean) {
+        // Change Main Background
+        binding.mainLayout.setBackgroundColor(if (isLight) LIGHT_BG else DARK_BG)
+
+        // Change Card Background
+        binding.statusCard.setCardBackgroundColor(if (isLight) LIGHT_CARD else DARK_CARD)
+
+        // Change Text Colors
+        // FIX 1: Use binding.statusText to reference the status TextView directly
+        binding.statusText.setTextColor(if (isLight) Color.parseColor("#C62828") else Color.parseColor("#FF9800"))
+
+        // FIX 2: Correctly reference the TextView inside the LinearLayout within the CardView.
+        // The original logic was incorrect and has been simplified by removing the duplicate CardView find.
+        binding.themeSwitch.setTextColor(if (isLight) LIGHT_TEXT else DARK_TEXT)
+        binding.themeSwitch.text = if (isLight) "Dark Theme" else "Light Theme"
     }
 
     private fun sendManualSOS() {

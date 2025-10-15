@@ -34,8 +34,8 @@ class SensorService : Service(), SensorEventListener {
     private val NOTIFICATION_ID = 1
     private val NOTIFICATION_CHANNEL_ID = "SensorServiceChannel"
 
-    private val LOW_THRESHOLD = 30.0
-    private val HIGH_THRESHOLD = 45.0
+    private val LOW_THRESHOLD = 40.0
+    private val HIGH_THRESHOLD = 50.0
     private val COOLDOWN_TIME = 60000L
 
     private var isSosSent = false
