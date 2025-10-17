@@ -1,50 +1,119 @@
 package com.example.vitaguard
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.example.vitaguard.databinding.ActivityMainBinding
 import com.google.android.gms.location.LocationServices
-import android.widget.TextView // ADDED import for TextView
+import android.view.ViewGroup
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.card.MaterialCardView
+import android.view.View // ADDED IMPORT
+import java.util.concurrent.TimeUnit
+import androidx.core.widget.NestedScrollView
+import com.airbnb.lottie.LottieAnimationView
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val PERMISSION_REQUEST_CODE = 101
 
-    // Constants for theme colors
-    private val DARK_BG = Color.parseColor("#1C1C24")
-    private val LIGHT_BG = Color.parseColor("#F5F5F5")
-    private val DARK_CARD = Color.parseColor("#2A2A38")
-    private val LIGHT_CARD = Color.parseColor("#FFFFFF")
-    private val DARK_TEXT = Color.parseColor("#BBBBBB")
-    private val LIGHT_TEXT = Color.parseColor("#1C1C24")
+    // SharedPreferences key for saving theme state
+    private val PREF_THEME_KEY = "is_light_theme"
+
+    // Theme color definitions for manual background swap
+    private val DARK_BG = Color.parseColor("#120D2F")
+    private val LIGHT_BG = Color.parseColor("#FFFFFF")
+    private val DARK_CARD = Color.parseColor("#211A3E")
+    private val LIGHT_CARD = Color.parseColor("#F0F0F0")
+    private val DARK_TEXT = Color.parseColor("#FFFFFF")
+    private val LIGHT_TEXT = Color.parseColor("#121212")
+
+    // Status color constants
+    private val COLOR_MONITORING = Color.parseColor("#4CAF50") // Green for monitoring
+    private val COLOR_STANDBY = Color.parseColor("#FF9800") // Amber for standby
+
+
+    // Receiver to get data from SensorService
+    private val monitorUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                // 1. Active Time
+                val elapsedTime = it.getLongExtra("ACTIVE_TIME", 0)
+                updateActiveTime(elapsedTime)
+
+                // 2. GPS Signal/Accuracy
+                val accuracy = it.getFloatExtra("GPS_ACCURACY", 0f)
+                updateGpsSignal(accuracy)
+
+                // 3. Battery Level
+                val batteryLevel = it.getIntExtra("BATTERY_LEVEL", 0)
+                updateBattery(batteryLevel)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        // 1. Load preference and Must call setTheme BEFORE super.onCreate()
+        val isLight = getSharedPreferences(PREF_THEME_KEY, Context.MODE_PRIVATE).getBoolean(PREF_THEME_KEY, false)
+        if (isLight) {
+            setTheme(R.style.Theme_VitaGuard_Light)
+        } else {
+            setTheme(R.style.Theme_VitaGuard_Dark)
+        }
 
-        // Apply theme immediately (defaulting to dark)
-        applyTheme(false)
+        super.onCreate(savedInstanceState)
+
+        try {
+            binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Layout inflation failed: ${e.message}")
+            Toast.makeText(this, "Error loading UI. Please check dependencies.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // Apply initial theme settings
+        applyInitialTheme(isLight)
+
+        // Initialize toolbar
+        setSupportActionBar(binding.toolbar)
+
+        // Set the toolbar title
+        supportActionBar?.title = "VitaGuard Monitor"
+
+        // Set initial state of switch based on loaded preference
+        binding.themeSwitch.isChecked = isLight
 
         checkAndRequestPermissions()
 
+        // --- BUTTON LISTENERS ---
         binding.startButton.setOnClickListener {
             SOSManager.loadContacts(this)
             startSensorService()
+            binding.statusText.text = "MONITORING"
+            binding.statusText.setTextColor(Color.parseColor("#4CAF50"))
+            setAnimationState(true) // Start animation
         }
 
         binding.stopButton.setOnClickListener {
             stopService(Intent(this, SensorService::class.java))
-            binding.statusText.text = "Monitoring OFF"
+            binding.statusText.text = "STANDBY"
+            binding.statusText.setTextColor(Color.parseColor("#FF9800"))
+            updateActiveTime(0) // Reset active time display
+            updateGpsSignal(0f)
+            setAnimationState(false) // Stop animation
         }
 
         binding.btnOpenMap.setOnClickListener {
@@ -64,29 +133,113 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, EmergencyContactsActivity::class.java))
         }
 
-        // NEW: Theme Switch Listener
+        // Link Settings Card to the Emergency Contacts Activity
+        binding.settingsCard.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        // FAB Click Listener to toggle scroll position
+        binding.fabMenu.setOnClickListener {
+            val nestedScrollView = binding.root.getChildAt(1)
+            if (nestedScrollView is NestedScrollView) {
+                val totalHeight = nestedScrollView.getChildAt(0).height
+                val visibleHeight = nestedScrollView.height
+                val currentScroll = nestedScrollView.scrollY
+
+                val isAtBottom = currentScroll >= (totalHeight - visibleHeight - 100)
+
+                if (isAtBottom) {
+                    nestedScrollView.smoothScrollTo(0, 0)
+                } else {
+                    nestedScrollView.smoothScrollTo(0, totalHeight)
+                }
+            }
+        }
+
+        // Theme Switch Listener: Saves new state and triggers screen refresh
         binding.themeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            applyTheme(isChecked)
+            saveThemeState(isChecked)
+        }
+
+        // Set initial animation state (STANDBY)
+        setAnimationState(false)
+    }
+
+    private fun setAnimationState(isMonitoring: Boolean) {
+        val animationView = binding.statusCard.findViewById<View>(R.id.statusAnimation) // statusAnimation is a View now
+        if (isMonitoring) {
+            animationView?.setBackgroundColor(COLOR_MONITORING)
+        } else {
+            animationView?.setBackgroundColor(COLOR_STANDBY)
         }
     }
 
-    // NEW: Theme application logic
-    private fun applyTheme(isLight: Boolean) {
-        // Change Main Background
+    override fun onStart() {
+        super.onStart()
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            monitorUpdateReceiver,
+            IntentFilter("MONITOR_UPDATE")
+        )
+    }
+
+    override fun onStop() {
+        super.onStop()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(monitorUpdateReceiver)
+    }
+
+    // --- UI UPDATE METHODS ---
+
+    private fun updateActiveTime(elapsedTime: Long) {
+        val hours = TimeUnit.MILLISECONDS.toHours(elapsedTime)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsedTime) % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(elapsedTime) % 60
+
+        binding.statsRow.findViewById<TextView>(R.id.activeTimeText)?.text =
+            String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    private fun updateGpsSignal(accuracy: Float) {
+        val signalText = when {
+            accuracy > 50f -> "Low"
+            accuracy > 10f -> "Medium"
+            accuracy > 0f -> "High"
+            else -> "Searching"
+        }
+        binding.statsRow.findViewById<TextView>(R.id.gpsAccuracyText)?.text = signalText
+    }
+
+    private fun updateBattery(level: Int) {
+        binding.statsRow.findViewById<TextView>(R.id.batteryText)?.text = "$level%"
+    }
+
+    // --- THEME LOGIC AND HELPER FUNCTIONS ---
+
+    private fun applyInitialTheme(isLight: Boolean) {
+        val targetTextColor = if (isLight) LIGHT_TEXT else DARK_TEXT
+
         binding.mainLayout.setBackgroundColor(if (isLight) LIGHT_BG else DARK_BG)
 
-        // Change Card Background
-        binding.statusCard.setCardBackgroundColor(if (isLight) LIGHT_CARD else DARK_CARD)
-
-        // Change Text Colors
-        // FIX 1: Use binding.statusText to reference the status TextView directly
-        binding.statusText.setTextColor(if (isLight) Color.parseColor("#C62828") else Color.parseColor("#FF9800"))
-
-        // FIX 2: Correctly reference the TextView inside the LinearLayout within the CardView.
-        // The original logic was incorrect and has been simplified by removing the duplicate CardView find.
+        // Adjust the switch label color based on the dark background
         binding.themeSwitch.setTextColor(if (isLight) LIGHT_TEXT else DARK_TEXT)
         binding.themeSwitch.text = if (isLight) "Dark Theme" else "Light Theme"
+
+        // Manually set the toolbar text color after applying the theme
+        binding.toolbar.setTitleTextColor(targetTextColor)
+
+        // Manually update Quick Actions title color
+        binding.root.findViewById<TextView>(R.id.quickActionsTitle)?.setTextColor(targetTextColor)
     }
+
+    private fun saveThemeState(isLight: Boolean) {
+        getSharedPreferences(PREF_THEME_KEY, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(PREF_THEME_KEY, isLight)
+            .apply()
+
+        recreate()
+    }
+
+    // --- PERMISSIONS AND SERVICE CONTROL ---
 
     private fun sendManualSOS() {
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -104,8 +257,8 @@ class MainActivity : AppCompatActivity() {
 
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
+                Toast.makeText(this, "Getting current location...", Toast.LENGTH_SHORT).show()
                 SOSManager.sendSOS(applicationContext, location.latitude, location.longitude)
-                Toast.makeText(this, "Manual SOS triggered!", Toast.LENGTH_LONG).show()
             } else {
                 Toast.makeText(this, "Could not get location. Cannot send SOS.", Toast.LENGTH_LONG).show()
             }
@@ -154,6 +307,6 @@ class MainActivity : AppCompatActivity() {
             startService(serviceIntent)
         }
 
-        binding.statusText.text = "Monitoring ON"
+        binding.statusText.text = "MONITORING"
     }
 }

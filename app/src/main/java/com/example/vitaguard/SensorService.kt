@@ -7,22 +7,32 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlin.math.sqrt
 import android.os.Handler
 import android.os.Binder
+import java.util.Timer
+import java.util.TimerTask
 
 class SensorService : Service(), SensorEventListener {
 
@@ -34,11 +44,29 @@ class SensorService : Service(), SensorEventListener {
     private val NOTIFICATION_ID = 1
     private val NOTIFICATION_CHANNEL_ID = "SensorServiceChannel"
 
-    private val LOW_THRESHOLD = 40.0
-    private val HIGH_THRESHOLD = 50.0
+    private val LOW_THRESHOLD = 30.0
+    private val HIGH_THRESHOLD = 45.0
     private val COOLDOWN_TIME = 60000L
 
     private var isSosSent = false
+
+    // Status tracking fields
+    private var startTime: Long = 0
+    private var currentGpsAccuracy: Float = 0f
+    private val broadcastManager by lazy { LocalBroadcastManager.getInstance(this) }
+    private val updateTimer = Timer()
+
+    private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
+        .setMinUpdateIntervalMillis(2000L)
+        .build()
+
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            locationResult.lastLocation?.let { location ->
+                currentGpsAccuracy = location.accuracy
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -50,11 +78,17 @@ class SensorService : Service(), SensorEventListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, createNotification())
 
+        // Start sensor and location updates
         accelerometer?.also { accel ->
             sensorManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_NORMAL)
         }
+        startLocationUpdates()
 
-        Log.d("SensorService", "Service started and sensor listener registered.")
+        // Start time and UI update timer
+        startTime = System.currentTimeMillis()
+        updateTimer.scheduleAtFixedRate(UpdateTask(), 0, 1000)
+
+        Log.d("SensorService", "Service started and monitoring registered.")
 
         return START_STICKY
     }
@@ -62,7 +96,23 @@ class SensorService : Service(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         sensorManager.unregisterListener(this)
-        Log.d("SensorService", "Service destroyed and listener unregistered.")
+        stopLocationUpdates()
+        updateTimer.cancel()
+        Log.d("SensorService", "Service destroyed and monitoring stopped.")
+    }
+
+    private fun startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+        }
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -76,21 +126,41 @@ class SensorService : Service(), SensorEventListener {
             if (!isSosSent) {
                 if (acceleration >= HIGH_THRESHOLD) {
                     isSosSent = true
-                    Log.d("SensorService", "High severity crash detected. Sending immediate SOS.")
                     triggerSOS(true)
 
                 } else if (acceleration >= LOW_THRESHOLD) {
                     isSosSent = true
-                    Log.d("SensorService", "Low severity incident detected. Starting 5-second countdown.")
                     triggerSOS(false)
                 }
             }
         }
     }
 
+    // UI Update Task (Runs every 1 second)
+    private inner class UpdateTask : TimerTask() {
+        override fun run() {
+            val intent = Intent("MONITOR_UPDATE")
+
+            // 1. Active Time
+            val elapsedTime = System.currentTimeMillis() - startTime
+            intent.putExtra("ACTIVE_TIME", elapsedTime)
+
+            // 2. GPS Signal/Accuracy
+            intent.putExtra("GPS_ACCURACY", currentGpsAccuracy)
+
+            // 3. Battery Level
+            val batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            val batteryLevel = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            intent.putExtra("BATTERY_LEVEL", batteryLevel)
+
+            broadcastManager.sendBroadcast(intent)
+        }
+    }
+
+    // --- SOS and Binding Functions (Unchanged for this request) ---
+
     fun resetSosState() {
         isSosSent = false
-        Log.d("SensorService", "SOS state manually reset.")
         Handler(Looper.getMainLooper()).postDelayed({
             isSosSent = false
         }, COOLDOWN_TIME)
@@ -104,7 +174,6 @@ class SensorService : Service(), SensorEventListener {
             timestamp = System.currentTimeMillis()
         )
         db.collection("accidents").add(accident)
-            .addOnSuccessListener { Log.d("SensorService", "Accident saved to Firestore.") }
 
         SOSManager.loadContacts(applicationContext)
         SOSManager.sendSOS(applicationContext, latitude, longitude)
@@ -114,10 +183,8 @@ class SensorService : Service(), SensorEventListener {
         }, COOLDOWN_TIME)
     }
 
-
     private fun triggerSOS(immediate: Boolean) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e("SensorService", "Location permission not granted. Cannot send SOS.")
             isSosSent = false
             return
         }
@@ -139,7 +206,6 @@ class SensorService : Service(), SensorEventListener {
                 }
 
             } else {
-                Log.e("SensorService", "Could not get location. Resetting state.")
                 isSosSent = false
             }
         }
@@ -147,7 +213,6 @@ class SensorService : Service(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
-    // LOCAL BINDER CLASS: This definition is necessary to fix the error in AlertActivity.kt
     private val binder = LocalBinder()
     inner class LocalBinder : Binder() {
         fun getService(): SensorService = this@SensorService

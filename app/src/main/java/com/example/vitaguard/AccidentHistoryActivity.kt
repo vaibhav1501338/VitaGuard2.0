@@ -1,5 +1,6 @@
 package com.example.vitaguard
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -13,8 +14,17 @@ class AccidentHistoryActivity : AppCompatActivity() {
     private val db = FirebaseFirestore.getInstance()
     private val accidentList = mutableListOf<Accident>()
     private lateinit var accidentAdapter: AccidentAdapter
+    private val PREF_THEME_KEY = "is_light_theme" // Theme key constant
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // CRITICAL: Load and apply theme state before super.onCreate()
+        val isLight = getSharedPreferences(PREF_THEME_KEY, Context.MODE_PRIVATE).getBoolean(PREF_THEME_KEY, false)
+        if (isLight) {
+            setTheme(R.style.Theme_VitaGuard_Light)
+        } else {
+            setTheme(R.style.Theme_VitaGuard_Dark)
+        }
+
         super.onCreate(savedInstanceState)
         binding = ActivityAccidentHistoryBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -34,6 +44,7 @@ class AccidentHistoryActivity : AppCompatActivity() {
         db.collection("accidents").get().addOnSuccessListener { result ->
             accidentList.clear()
             for (document in result) {
+                // Assuming Accident data class has default constructors for Firebase
                 val accident = document.toObject(Accident::class.java)
                 accidentList.add(accident)
             }

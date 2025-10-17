@@ -37,8 +37,13 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
 
+    // Utilities for multi-contact management and animation
     implementation(libs.gson)
+    // FIX: Lottie library often fails alias resolution; use direct string format as fallback
+    implementation("com.airbnb.android:lottie:6.4.1")
 
+    // Firebase Core and Firestore
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.firestore.ktx)
 }

@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS" /> <!-- ADDED -->
 
     <!-- Required for Foreground Service on modern Android (API 31+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -42,7 +43,14 @@
         <activity android:name=".AccidentHistoryActivity" />
         <activity android:name=".EmergencyContactsActivity" />
 
-        <!-- FIX: Using the single, compatible 'location' flag to bypass the AAPT error -->
+        <!-- New Alert Activity for 5-second cancel countdown -->
+        <activity
+            android:name=".AlertActivity"
+            android:theme="@style/Theme.AppCompat.Dialog"
+            android:showOnLockScreen="true"
+            android:exported="false"/>
+
+        <!-- Final working service declaration (using 'location' as primary type for compatibility) -->
         <service
             android:name=".SensorService"
             android:foregroundServiceType="location"

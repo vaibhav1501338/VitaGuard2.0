@@ -1,6 +1,7 @@
 package com.example.vitaguard
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -24,8 +25,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val db = FirebaseFirestore.getInstance()
     private val LOCATION_PERMISSION_REQUEST_CODE = 1
+    private val PREF_THEME_KEY = "is_light_theme" // Theme key constant
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // CRITICAL: Load and apply theme state before super.onCreate()
+        val isLight = getSharedPreferences(PREF_THEME_KEY, Context.MODE_PRIVATE).getBoolean(PREF_THEME_KEY, false)
+        if (isLight) {
+            setTheme(R.style.Theme_VitaGuard_Light)
+        } else {
+            setTheme(R.style.Theme_VitaGuard_Dark)
+        }
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
 

@@ -1,6 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.VitaGuard" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorAccent">@color/teal_200</item>
+
+    <!-- Base Theme: Must inherit from DayNight to handle the switch correctly. -->
+    <style name="Theme.VitaGuard" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Default Material settings, ensures compatibility -->
+        <item name="materialCardViewStyle">@style/Widget.Material3.CardView.Elevated</item>
+        <item name="colorPrimary">#6200EE</item>
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
     </style>
+
+    <!-- 1. IBIZA SUNSET MODE (Dark Theme) - Deep Violet/Magenta/Orange -->
+    <style name="Theme.VitaGuard.Dark" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary (Deep Violet for AppBar/Main Surfaces: #211A3E) -->
+        <item name="colorPrimary">#211A3E</item>
+        <item name="colorPrimaryVariant">#120D2F</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+
+        <!-- Secondary (Bright Magenta/Orange Accent) -->
+        <item name="colorSecondary">#FF0077</item>
+        <item name="colorSecondaryVariant">#FF9900</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+
+        <!-- Background structure -->
+        <item name="android:colorBackground">#120D2F</item> <!-- Deep Violet Background -->
+        <item name="colorSurface">#211A3E</item> <!-- Dark Surface for Cards -->
+        <item name="colorOnSurface">#FFFFFF</item> <!-- White text -->
+
+        <!-- Status bar color -->
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+
+        <item name="materialCardViewStyle">@style/Widget.Material3.CardView.Elevated</item>
+        <item name="appBarLayoutStyle">@style/Widget.MaterialComponents.AppBarLayout.Surface</item>
+        <item name="toolbarStyle">@style/Widget.MaterialComponents.Toolbar.Surface</item>
+    </style>
+
+    <!-- 2. DUSK MODE (Light Theme) - Soft Dark Blue/Coral -->
+    <style name="Theme.VitaGuard.Light" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Primary (Soft Dark Blue/Grey for AppBar/Main Surfaces) -->
+        <item name="colorPrimary">#2C3E50</item>
+        <item name="colorPrimaryVariant">#22313F</item>
+        <item name="colorOnPrimary">#000000</item>
+
+        <!-- Secondary (Soft Coral Accent) -->
+        <item name="colorSecondary">#D6746C</item>
+        <item name="colorSecondaryVariant">#FF9900</item>
+        <item name="colorOnSecondary">#121212</item>
+
+        <!-- Background structure -->
+        <item name="android:colorBackground">#FFFFFF</item> <!-- Pure White background -->
+        <item name="colorSurface">#F0F0F0</item> <!-- Soft light grey for cards/surfaces -->
+        <item name="colorOnSurface">#121212</item> <!-- Black text for high visibility -->
+
+        <!-- Status bar color -->
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+
+        <item name="materialCardViewStyle">@style/Widget.Material3.CardView.Elevated</item>
+
+        <item name="appBarLayoutStyle">@style/Widget.MaterialComponents.AppBarLayout.Surface</item>
+        <item name="toolbarStyle">@style/Widget.MaterialComponents.Toolbar.Surface</item>
+    </style>
+
+
+    <style name="Theme.VitaGuard.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.VitaGuard.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="Theme.VitaGuard.Light.AppBarOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <style name="Theme.VitaGuard.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>
